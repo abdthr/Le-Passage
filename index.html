@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Le Passage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+
+    :root {
+      --black:   #0D0D0D;
+      --charcoal:#161616;
+      --card:    #1C1C1C;
+      --gold:    #F5A623;
+      --orange:  #E8621A;
+      --beige:   #F2E8D9;
+      --white:   #FFFFFF;
+      --muted:   #6B6B6B;
+      --border:  rgba(245,166,35,0.18);
+      --glow:    0 0 40px rgba(245,166,35,0.22);
+    }
+
+    body {
+      background: var(--black);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ─── CURSOR ──────────────────────────────────────────────────── */
+    .cursor {
+      position: fixed; width: 12px; height: 12px;
+      background: var(--gold); border-radius: 50%;
+      pointer-events: none; z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: width 0.25s, height 0.25s;
+      mix-blend-mode: difference;
+    }
+    .cursor-ring {
+      position: fixed; width: 36px; height: 36px;
+      border: 1.5px solid rgba(245,166,35,0.55); border-radius: 50%;
+      pointer-events: none; z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: transform 0.18s ease, width 0.3s, height 0.3s;
+    }
+    body:has(a:hover) .cursor, body:has(button:hover) .cursor { width: 20px; height: 20px; }
+    body:has(a:hover) .cursor-ring, body:has(button:hover) .cursor-ring { width: 52px; height: 52px; }
+
+    /* ─── NOISE ───────────────────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.03; pointer-events: none; z-index: 0;
+    }
+
+    /* ─── NAVBAR ──────────────────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+      padding: 0 48px; height: 72px;
+      background: rgba(13,13,13,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.3s;
+    }
+    nav.scrolled { background: rgba(13,13,13,0.97); }
+    .nav-logo { height: 44px; object-fit: contain; }
+    .nav-links { display: flex; align-items: center; justify-content: center; gap: 36px; list-style: none; }
+    .nav-links a {
+      color: var(--beige); text-decoration: none;
+      font-family: 'Oswald', sans-serif; font-weight: 400;
+      font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase;
+      opacity: 0.75; transition: opacity 0.2s, color 0.2s; position: relative;
+    }
+    .nav-links a::after {
+      content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
+      height: 1px; background: var(--gold);
+      transform: scaleX(0); transition: transform 0.25s ease; transform-origin: left;
+    }
+    .nav-links a:hover { opacity: 1; color: var(--white); }
+    .nav-links a:hover::after { transform: scaleX(1); }
+    .nav-cta-wrap { display: flex; justify-content: flex-end; }
+    .nav-cta {
+      background: var(--gold); color: var(--black);
+      font-family: 'Oswald', sans-serif; font-weight: 700;
+      font-size: 0.82rem; letter-spacing: 0.14em; text-transform: uppercase;
+      padding: 10px 26px; border: none; cursor: none; text-decoration: none;
+      display: inline-block;
+      transition: background 0.2s, transform 0.2s;
+      clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    }
+    .nav-cta:hover { background: var(--orange); transform: translateY(-1px); }
+
+    /* ─── HERO ────────────────────────────────────────────────────── */
+    #hero {
+      position: relative; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; overflow: hidden;
+      padding: 80px 24px 140px;
+    }
+    .hero-bg-photo {
+      position: absolute; inset: 0;
+      background: url('brand_assets/Photos/photo1.png') center center / cover no-repeat;
+    }
+    .hero-bg-overlay {
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(to bottom, rgba(13,13,13,0.72) 0%, rgba(13,13,13,0.55) 40%, rgba(13,13,13,0.80) 100%),
+        radial-gradient(ellipse 70% 50% at 50% 40%, rgba(245,166,35,0.06) 0%, transparent 60%);
+    }
+    .hero-badge {
+      position: relative; z-index: 2;
+      display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.3);
+      padding: 6px 18px; font-family: 'Oswald', sans-serif;
+      font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 36px;
+      animation: fadeUp 0.8s ease both;
+    }
+    .hero-badge::before, .hero-badge::after { content: '✦'; font-size: 0.55rem; opacity: 0.6; }
+    .hero-logo-wrap {
+      position: relative; z-index: 2;
+      width: min(480px, 82vw); margin-bottom: 40px;
+      animation: fadeUp 0.9s 0.1s ease both;
+    }
+    .hero-logo-wrap img { width: 100%; border-radius: 4px; display: block; }
+    .hero-logo-wrap::before {
+      content: ''; position: absolute; inset: -2px;
+      border: 1px solid rgba(245,166,35,0.2); border-radius: 6px; pointer-events: none;
+    }
+    .hero-headline {
+      position: relative; z-index: 2;
+      font-family: 'Anton', sans-serif; line-height: 0.92;
+      margin-bottom: 24px; animation: fadeUp 1s 0.2s ease both;
+    }
+    .hero-headline .line1 { display: block; font-size: clamp(3rem, 7.5vw, 6.5rem); color: var(--white); letter-spacing: 0.01em; }
+    .hero-headline .line2 { display: block; font-size: clamp(3rem, 7.5vw, 6.5rem); color: var(--gold); letter-spacing: 0.01em; }
+    .hero-sub {
+      position: relative; z-index: 2;
+      font-family: 'Oswald', sans-serif; font-weight: 300;
+      font-size: clamp(0.85rem, 2vw, 1.05rem); letter-spacing: 0.28em;
+      text-transform: uppercase; color: rgba(242,232,217,0.6);
+      margin-bottom: 52px; animation: fadeUp 1s 0.3s ease both;
+    }
+    .hero-actions {
+      position: relative; z-index: 2;
+      display: flex; gap: 16px; align-items: center; justify-content: center; flex-wrap: wrap;
+      animation: fadeUp 1s 0.4s ease both;
+    }
+    .btn-primary {
+      background: var(--gold); color: var(--black);
+      font-family: 'Oswald', sans-serif; font-weight: 700;
+      font-size: 0.88rem; letter-spacing: 0.16em; text-transform: uppercase;
+      padding: 16px 40px; border: none; cursor: none; text-decoration: none;
+      display: inline-block; transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+      clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+    }
+    .btn-primary:hover { background: var(--orange); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(245,166,35,0.3); }
+    .btn-ghost {
+      color: var(--beige); font-family: 'Oswald', sans-serif; font-weight: 400;
+      font-size: 0.88rem; letter-spacing: 0.14em; text-transform: uppercase;
+      padding: 15px 36px; border: 1px solid rgba(242,232,217,0.35); cursor: none;
+      text-decoration: none; display: inline-block;
+      transition: border-color 0.2s, color 0.2s, transform 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-2px); }
+    .hero-scroll {
+      position: absolute; bottom: 40px;
+      left: 0; right: 0; margin: 0 auto;
+      width: fit-content;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      animation: fadeUp 1s 0.6s ease both; text-decoration: none; z-index: 3;
+    }
+    .hero-scroll span {
+      font-family: 'Oswald', sans-serif; font-size: 0.62rem;
+      letter-spacing: 0.28em; text-transform: uppercase; color: rgba(245,166,35,0.6);
+    }
+    .scroll-arrow {
+      width: 26px; height: 26px;
+      border-right: 1.5px solid var(--gold); border-bottom: 1.5px solid var(--gold);
+      transform: rotate(45deg); animation: bounce 2s infinite; opacity: 0.7;
+    }
+
+    /* ─── FEATURED ────────────────────────────────────────────────── */
+    #featured { padding: 100px 48px; position: relative; z-index: 1; }
+    .section-label {
+      display: flex; align-items: center; gap: 16px;
+      font-family: 'Oswald', sans-serif; font-size: 0.7rem;
+      letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px;
+    }
+    .section-label::before { content: ''; width: 32px; height: 1px; background: var(--gold); }
+    .section-title {
+      font-family: 'Anton', sans-serif; font-size: clamp(2.4rem, 5vw, 4rem);
+      line-height: 0.95; margin-bottom: 60px; letter-spacing: 0.01em;
+    }
+    .section-title em { color: var(--gold); font-style: normal; }
+    .featured-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .feat-card {
+      background: var(--card); border: 1px solid rgba(255,255,255,0.06);
+      overflow: hidden; position: relative;
+      transition: transform 0.3s ease, border-color 0.3s, box-shadow 0.3s; cursor: none;
+    }
+    .feat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--gold), var(--orange));
+      transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease; z-index: 2;
+    }
+    .feat-card:hover { transform: translateY(-6px); border-color: var(--border); box-shadow: var(--glow); }
+    .feat-card:hover::before { transform: scaleX(1); }
+    .feat-photo {
+      width: 100%; height: 220px; object-fit: cover; display: block;
+      transition: transform 0.5s ease; filter: brightness(0.88);
+    }
+    .feat-card:hover .feat-photo { transform: scale(1.04); filter: brightness(1); }
+    .feat-body { padding: 24px 24px 26px; }
+    .price-tag {
+      position: absolute; top: 16px; right: 0;
+      background: var(--gold); color: var(--black);
+      font-family: 'Anton', sans-serif; font-size: 1.1rem;
+      padding: 6px 16px 6px 12px;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
+      line-height: 1; z-index: 2;
+    }
+    .feat-tag {
+      font-family: 'Oswald', sans-serif; font-size: 0.65rem;
+      letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px;
+    }
+    .feat-name {
+      font-family: 'Anton', sans-serif; font-size: 1.5rem;
+      letter-spacing: 0.02em; margin-bottom: 10px; line-height: 1;
+    }
+    .feat-desc { font-size: 0.82rem; color: rgba(242,232,217,0.5); line-height: 1.65; font-weight: 300; }
+
+    /* ─── MENU SECTION ────────────────────────────────────────────── */
+    #menu {
+      padding: 100px 48px; background: var(--charcoal);
+      position: relative; z-index: 1;
+    }
+    #menu::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    }
+    .tab-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 40px; }
+    .tab-btn {
+      background: transparent; border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(242,232,217,0.5); font-family: 'Oswald', sans-serif;
+      font-weight: 400; font-size: 0.75rem; letter-spacing: 0.18em; text-transform: uppercase;
+      padding: 9px 20px; cursor: none; transition: all 0.22s;
+      clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    }
+    .tab-btn:hover { border-color: rgba(245,166,35,0.4); color: var(--beige); }
+    .tab-btn.active { background: var(--gold); border-color: var(--gold); color: var(--black); font-weight: 600; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fadeIn 0.35s ease; }
+    .menu-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2px;
+    }
+    .menu-item {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 18px 22px; background: rgba(255,255,255,0.022);
+      border: 1px solid rgba(255,255,255,0.04);
+      transition: background 0.2s, border-color 0.2s; cursor: none;
+    }
+    .menu-item:hover { background: rgba(245,166,35,0.05); border-color: rgba(245,166,35,0.12); }
+    .menu-dot {
+      flex-shrink: 0; margin-top: 6px;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--gold); opacity: 0.55;
+    }
+    .menu-item-body { flex: 1; }
+    .menu-item-name {
+      font-family: 'Oswald', sans-serif; font-weight: 600;
+      font-size: 0.95rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 3px;
+    }
+    .menu-item-desc { font-size: 0.75rem; color: rgba(242,232,217,0.4); line-height: 1.55; font-weight: 300; }
+    .menu-item-price {
+      font-family: 'Anton', sans-serif; font-size: 1rem;
+      color: var(--gold); white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+    }
+    .menu-item-price small {
+      font-family: 'Oswald', sans-serif; font-size: 0.62rem; font-weight: 300;
+      color: rgba(245,166,35,0.55); display: block; letter-spacing: 0.08em; margin-top: 1px;
+    }
+    .menu-note {
+      margin-top: 16px; font-family: 'Oswald', sans-serif; font-size: 0.7rem;
+      letter-spacing: 0.18em; text-transform: uppercase; color: rgba(245,166,35,0.4);
+    }
+
+    /* Menu enfant */
+    .enfant-card {
+      background: linear-gradient(135deg, #0f2a4a 0%, #0d1f38 100%);
+      border: 1px solid rgba(100,180,255,0.2);
+      padding: 28px 32px; display: flex; align-items: center; gap: 28px;
+      position: relative; overflow: hidden;
+    }
+    .enfant-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 80% 50%, rgba(100,180,255,0.08), transparent 60%);
+    }
+    .enfant-photo {
+      width: 110px; height: 110px; border-radius: 50%;
+      object-fit: cover; flex-shrink: 0;
+      border: 2px solid rgba(100,180,255,0.3);
+    }
+    .enfant-body { flex: 1; position: relative; }
+    .enfant-label {
+      font-family: 'Oswald', sans-serif; font-size: 0.65rem;
+      letter-spacing: 0.25em; text-transform: uppercase; color: #64b4ff; margin-bottom: 6px;
+    }
+    .enfant-title { font-family: 'Anton', sans-serif; font-size: 1.5rem; color: var(--white); margin-bottom: 8px; }
+    .enfant-items { font-size: 0.8rem; color: rgba(255,255,255,0.55); line-height: 1.7; }
+    .enfant-price { font-family: 'Anton', sans-serif; font-size: 2.2rem; color: #64b4ff; position: relative; }
+    .enfant-price small { display: block; font-family: 'Oswald', sans-serif; font-size: 0.7rem; font-weight: 300; opacity: 0.6; letter-spacing: 0.1em; }
+
+    /* ─── ABOUT ───────────────────────────────────────────────────── */
+    #about {
+      padding: 0; position: relative; z-index: 1; overflow: hidden;
+      display: grid; grid-template-columns: 1fr 1fr; min-height: 600px;
+    }
+    .about-photo-side {
+      position: relative; overflow: hidden;
+    }
+    .about-photo-side img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      filter: brightness(0.75) saturate(0.85);
+    }
+    .about-photo-side::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to right, transparent 60%, var(--black) 100%);
+    }
+    .about-text-side {
+      background: var(--black); padding: 80px 60px;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .about-quote-mark {
+      font-family: 'Anton', sans-serif; font-size: 8rem; line-height: 0.7;
+      color: rgba(245,166,35,0.08); margin-bottom: -16px; display: block;
+    }
+    .about-text {
+      font-family: 'Anton', sans-serif; font-size: clamp(1.7rem, 3vw, 2.8rem);
+      line-height: 1.15; letter-spacing: 0.01em; margin-bottom: 32px;
+    }
+    .about-text em { color: var(--gold); font-style: normal; }
+    .about-divider { width: 60px; height: 2px; background: linear-gradient(90deg, var(--gold), var(--orange)); margin-bottom: 28px; }
+    .about-tagline {
+      font-family: 'Oswald', sans-serif; font-weight: 300; font-size: 0.95rem;
+      letter-spacing: 0.2em; text-transform: uppercase; color: rgba(242,232,217,0.45);
+      margin-bottom: 48px;
+    }
+    .about-tagline strong { color: var(--gold); font-weight: 600; }
+    .about-pillars { display: flex; flex-direction: column; gap: 24px; }
+    .pillar { display: flex; gap: 20px; align-items: flex-start; }
+    .pillar-num {
+      font-family: 'Anton', sans-serif; font-size: 1.8rem;
+      color: rgba(245,166,35,0.18); line-height: 1; flex-shrink: 0; width: 36px;
+    }
+    .pillar-content {}
+    .pillar-title {
+      font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 0.8rem;
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin-bottom: 4px;
+    }
+    .pillar-body { font-size: 0.8rem; color: rgba(242,232,217,0.4); line-height: 1.6; }
+
+    /* ─── FOOTER ──────────────────────────────────────────────────── */
+    footer {
+      background: #080808; border-top: 1px solid rgba(255,255,255,0.07);
+      padding: 60px 48px 32px; position: relative; z-index: 1;
+    }
+    .footer-top {
+      display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 48px; margin-bottom: 52px;
+    }
+    .footer-logo { height: 50px; margin-bottom: 16px; object-fit: contain; }
+    .footer-tagline {
+      font-family: 'Oswald', sans-serif; font-weight: 300; font-size: 0.72rem;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: rgba(242,232,217,0.3); margin-bottom: 24px;
+    }
+    .social-links { display: flex; gap: 12px; }
+    .social-link {
+      width: 38px; height: 38px; border: 1px solid rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(242,232,217,0.5); text-decoration: none; font-size: 0.9rem;
+      transition: border-color 0.2s, color 0.2s, background 0.2s; cursor: none;
+    }
+    .social-link:hover { border-color: var(--gold); color: var(--gold); background: rgba(245,166,35,0.08); }
+    .footer-col-title {
+      font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 0.72rem;
+      letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold); margin-bottom: 20px;
+    }
+    .footer-links { list-style: none; }
+    .footer-links li { margin-bottom: 10px; }
+    .footer-links a {
+      color: rgba(242,232,217,0.45); text-decoration: none;
+      font-size: 0.82rem; transition: color 0.2s; cursor: none;
+    }
+    .footer-links a:hover { color: var(--beige); }
+    .footer-address { color: rgba(242,232,217,0.4); font-size: 0.82rem; line-height: 1.85; }
+    .footer-address strong { color: var(--beige); font-weight: 500; }
+    .footer-hours { list-style: none; }
+    .footer-hours li {
+      display: flex; justify-content: space-between;
+      font-size: 0.78rem; color: rgba(242,232,217,0.4); margin-bottom: 7px; gap: 16px;
+    }
+    .footer-hours li span:last-child { color: rgba(242,232,217,0.65); }
+    .footer-hours .highlight { color: var(--gold); }
+    .footer-hours .highlight span:last-child { color: var(--gold); }
+    .footer-bottom {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: 28px; border-top: 1px solid rgba(255,255,255,0.07); flex-wrap: wrap; gap: 12px;
+    }
+    .footer-copy { font-size: 0.72rem; color: rgba(242,232,217,0.2); letter-spacing: 0.06em; }
+    .footer-copy span { color: var(--gold); }
+
+    /* ─── ANIMATIONS ──────────────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes bounce {
+      0%, 100% { transform: rotate(45deg) translateY(0); }
+      50%       { transform: rotate(45deg) translateY(6px); }
+    }
+    .reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ─── RESPONSIVE ──────────────────────────────────────────────── */
+    @media (max-width: 1024px) {
+      nav { padding: 0 28px; }
+      #featured, #menu, footer { padding-left: 28px; padding-right: 28px; }
+      .featured-grid { grid-template-columns: 1fr 1fr; }
+      .footer-top { grid-template-columns: 1fr 1fr; }
+      #about { grid-template-columns: 1fr; }
+      .about-photo-side { height: 400px; }
+      .about-photo-side::after { background: linear-gradient(to bottom, transparent 50%, var(--black) 100%); }
+      .about-text-side { padding: 60px 40px; }
+    }
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .featured-grid { grid-template-columns: 1fr; }
+      .footer-top { grid-template-columns: 1fr; gap: 32px; }
+      #featured, #menu { padding: 72px 20px; }
+      footer { padding: 48px 20px 24px; }
+      .about-text-side { padding: 52px 20px; }
+      .enfant-card { flex-direction: column; text-align: center; }
+      .menu-grid { grid-template-columns: 1fr; }
+      body { cursor: auto; }
+      .cursor, .cursor-ring { display: none; }
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--black); }
+    ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+    ::selection { background: rgba(245,166,35,0.3); color: var(--white); }
+  </style>
+</head>
+<body>
+
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <!-- ─── NAVBAR ─────────────────────────────────────────────────── -->
+  <nav id="navbar">
+    <img src="brand_assets/brand_logo1.jpg" alt="Le Passage" class="nav-logo" />
+    <ul class="nav-links">
+      <li><a href="#featured">Signature</a></li>
+      <li><a href="#menu">Menu</a></li>
+      <li><a href="#about">À Propos</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <div class="nav-cta-wrap">
+      <a href="tel:0473438426" class="nav-cta">Commander</a>
+    </div>
+  </nav>
+
+  <!-- ─── HERO ───────────────────────────────────────────────────── -->
+  <section id="hero">
+    <div class="hero-bg-photo"></div>
+    <div class="hero-bg-overlay"></div>
+    <div class="hero-badge">Ouvert 7j/7 · 12h – 02h00</div>
+    <div class="hero-logo-wrap">
+      <img src="brand_assets/brand_logo1.jpg" alt="Le Passage" />
+    </div>
+    <h1 class="hero-headline">
+      <span class="line1">PLUS QU'UN REPAS.</span>
+      <span class="line2">UNE EXPÉRIENCE.</span>
+    </h1>
+    <p class="hero-sub">Burgers &nbsp;•&nbsp; Pizzas &nbsp;•&nbsp; Pâtes &nbsp;•&nbsp; Hot-dogs</p>
+    <div class="hero-actions">
+      <a href="#menu" class="btn-primary">Voir le menu</a>
+      <a href="#about" class="btn-ghost">Notre histoire</a>
+    </div>
+    <a href="#featured" class="hero-scroll">
+      <span>Découvrir</span>
+      <div class="scroll-arrow"></div>
+    </a>
+  </section>
+
+  <!-- ─── FEATURED ───────────────────────────────────────────────── -->
+  <section id="featured">
+    <div class="section-label">Nos incontournables</div>
+    <h2 class="section-title reveal">Les <em>Signatures</em><br/>du Passage</h2>
+    <div class="featured-grid">
+      <div class="feat-card reveal">
+        <img src="brand_assets/Photos/burger2.jpeg" alt="Twins Spicy" class="feat-photo" />
+        <div class="feat-body">
+          <div class="price-tag">12€</div>
+          <div class="feat-tag">Burger · Signature</div>
+          <div class="feat-name">TWINS SPICY</div>
+          <p class="feat-desc">Viande hachée ou poulet, salade, tomate, oignons rouge, jalapeños, cheddar, sauce spicy.</p>
+        </div>
+      </div>
+      <div class="feat-card reveal" style="transition-delay:0.1s">
+        <img src="brand_assets/Photos/hotdog3.jpg" alt="Le Passage Hot-dog" class="feat-photo" />
+        <div class="feat-body">
+          <div class="price-tag">9€</div>
+          <div class="feat-tag">Hot-dog · Maison</div>
+          <div class="feat-name">LE PASSAGE</div>
+          <p class="feat-desc">Saucisse premium, sauce spicy signature, oignons frits croustillants, jalapeños, bacon grillé.</p>
+        </div>
+      </div>
+      <div class="feat-card reveal" style="transition-delay:0.2s">
+        <img src="brand_assets/Photos/bbq_chicken_pizza.jpg" alt="BBQ Chicken" class="feat-photo" />
+        <div class="feat-body">
+          <div class="price-tag">9 – 13€</div>
+          <div class="feat-tag">Pizza Spéciale</div>
+          <div class="feat-name">BBQ CHICKEN</div>
+          <p class="feat-desc">Base tomate fumée, mozzarella généreuse, poulet mariné, oignons caramélisés, sauce BBQ intense.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── MENU ────────────────────────────────────────────────────── -->
+  <section id="menu">
+    <div class="section-label">Carte complète</div>
+    <h2 class="section-title reveal">Notre <em>Menu</em></h2>
+
+    <div class="tab-bar" role="tablist">
+      <button class="tab-btn active" onclick="switchTab('burgers', this)">Burgers</button>
+      <button class="tab-btn" onclick="switchTab('hotdogs', this)">Hot-dogs</button>
+      <button class="tab-btn" onclick="switchTab('pizza-classique', this)">Pizza Classique</button>
+      <button class="tab-btn" onclick="switchTab('pizza-speciale', this)">Pizza Spéciale</button>
+      <button class="tab-btn" onclick="switchTab('pates', this)">Pâtes</button>
+      <button class="tab-btn" onclick="switchTab('salades', this)">Salades</button>
+      <button class="tab-btn" onclick="switchTab('entrees', this)">Entrées</button>
+      <button class="tab-btn" onclick="switchTab('boissons', this)">Boissons</button>
+      <button class="tab-btn" onclick="switchTab('desserts', this)">Desserts</button>
+      <button class="tab-btn" onclick="switchTab('enfant', this)">Menu Enfant</button>
+    </div>
+
+    <!-- BURGERS -->
+    <div class="tab-panel active" id="tab-burgers">
+      <div class="menu-grid">
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">The Shadow</div>
+            <div class="menu-item-desc">Poulet & steak de veau + œuf, salade, tomate, oignons rouge, cheddar, sauce barbecue</div>
+          </div>
+          <div class="menu-item-price">13€</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Steak Rings</div>
+            <div class="menu-item-desc">Steak de veau & oignons rings, salade tomate, cheddar, sauce poivre</div>
+          </div>
+          <div class="menu-item-price">13€</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Twins Spicy</div>
+            <div class="menu-item-desc">Viande hachée ou poulet, salade, tomate, oignons rouge, jalapeños, cheddar, sauce spicy</div>
+          </div>
+          <div class="menu-item-price">12€</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Raclette</div>
+            <div class="menu-item-desc">Viande hachée & rösti, oignons frits, fromage Raclette, mayo à la truffe</div>
+          </div>
+          <div class="menu-item-price">13€</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Chèvre</div>
+            <div class="menu-item-desc">Poulet, salade, tomate, oignons frits, fromage chèvre, sauce mayo à la truffe</div>
+          </div>
+          <div class="menu-item-price">13€</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Twins</div>
+            <div class="menu-item-desc">Viande hachée ou poulet + dinde fumé, salade, tomate, oignons rouge, cheddar, sauce maison</div>
+          </div>
+          <div class="menu-item-price">11€</div>
+        </div>
+      </div>
+      <p class="menu-note">— Tous les burgers sont accompagnés au choix de frites ou potatoes</p>
+    </div>
+
+    <!-- HOT-DOGS -->
+    <div class="tab-panel" id="tab-hotdogs">
+      <div class="menu-grid">
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Classique</div>
+            <div class="menu-item-desc">Saucisse, ketchup, moutarde, oignons frits</div>
+          </div>
+          <div class="menu-item-price">8€</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Le Passage</div>
+            <div class="menu-item-desc">Saucisse, sauce spicy, oignons frits, jalapeños, bacon</div>
+          </div>
+          <div class="menu-item-price">9€</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Swetty</div>
+            <div class="menu-item-desc">Saucisse, sauce sucrée, ananas, oignons frits</div>
+          </div>
+          <div class="menu-item-price">9€</div>
+        </div>
+      </div>
+      <p class="menu-note">— Accompagné au choix de frites ou potatoes</p>
+    </div>
+
+    <!-- PIZZA CLASSIQUE -->
+    <div class="tab-panel" id="tab-pizza-classique">
+      <div class="menu-grid">
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Margherita</div></div><div class="menu-item-price">8€<small>Grande · 10€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Pepperoni</div></div><div class="menu-item-price">8€<small>Grande · 10€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Forestière</div></div><div class="menu-item-price">9€<small>Grande · 11€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Beef Supreme</div></div><div class="menu-item-price">9€<small>Grande · 11€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Chorizo</div></div><div class="menu-item-price">9€<small>Grande · 11€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Mexicaine</div></div><div class="menu-item-price">9€<small>Grande · 11€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Al Tonno</div></div><div class="menu-item-price">9€<small>Grande · 11€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Végétarienne</div></div><div class="menu-item-price">9€<small>Grande · 11€</small></div></div>
+      </div>
+    </div>
+
+    <!-- PIZZA SPÉCIALE -->
+    <div class="tab-panel" id="tab-pizza-speciale">
+      <div class="menu-grid">
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">4 Fromage</div></div><div class="menu-item-price">8€<small>Grande · 11€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">BBQ Chicken</div></div><div class="menu-item-price">9€<small>Grande · 13€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Green Curry</div></div><div class="menu-item-price">9€<small>Grande · 13€</small></div></div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Chèvre Miel</div>
+            <div class="menu-item-desc">Mozzarella, dinde, fromage chèvre, miel</div>
+          </div>
+          <div class="menu-item-price">6€<small>Grande · 11€</small></div>
+        </div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Raclette</div></div><div class="menu-item-price">9€<small>Grande · 13€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">BBQ Américaine</div></div><div class="menu-item-price">9€<small>Grande · 13€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Oceania</div></div><div class="menu-item-price">9€<small>Grande · 13€</small></div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Scampis</div></div><div class="menu-item-price">—<small>Grande · 13€</small></div></div>
+      </div>
+    </div>
+
+    <!-- PÂTES -->
+    <div class="tab-panel" id="tab-pates">
+      <div class="menu-grid">
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Bolognaise</div></div><div class="menu-item-price">9€</div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Poulet / Champignon</div></div><div class="menu-item-price">10€</div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Poulet Chèvre</div></div><div class="menu-item-price">10€</div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Gorgonzola</div></div><div class="menu-item-price">10€</div></div>
+      </div>
+    </div>
+
+    <!-- SALADES -->
+    <div class="tab-panel" id="tab-salades">
+      <div class="menu-grid">
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Salade César</div></div><div class="menu-item-price">8€</div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Salade Scampis</div></div><div class="menu-item-price">9€</div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Salade Végétarien</div></div><div class="menu-item-price">7€</div></div>
+      </div>
+    </div>
+
+    <!-- ENTRÉES -->
+    <div class="tab-panel" id="tab-entrees">
+      <div class="menu-grid">
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Cheese Steak</div></div><div class="menu-item-price">6,50€</div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Cheese Stix</div></div><div class="menu-item-price">6,50€</div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Pain à l'ail</div></div><div class="menu-item-price">5€</div></div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Mozza Stick</div>
+            <div class="menu-item-desc">8 pièces</div>
+          </div>
+          <div class="menu-item-price">5€</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Potatoes</div>
+            <div class="menu-item-desc">1 kg</div>
+          </div>
+          <div class="menu-item-price">7,80€</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOISSONS -->
+    <div class="tab-panel" id="tab-boissons">
+      <div class="menu-grid">
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Soft</div>
+            <div class="menu-item-desc">33cl</div>
+          </div>
+          <div class="menu-item-price">2€</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Milkshakes</div>
+            <div class="menu-item-desc">Snickers · Bueno · Vanille</div>
+          </div>
+          <div class="menu-item-price">5€</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Smoothie</div>
+            <div class="menu-item-desc">Fraise · Fruits rouges · Tropicale</div>
+          </div>
+          <div class="menu-item-price">5€</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-dot"></div>
+          <div class="menu-item-body">
+            <div class="menu-item-name">Mojito</div>
+            <div class="menu-item-desc">Violette · Fraise · Passion</div>
+          </div>
+          <div class="menu-item-price">5€</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DESSERTS -->
+    <div class="tab-panel" id="tab-desserts">
+      <div class="menu-grid">
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Tiramisu Maison</div></div><div class="menu-item-price">3,50€</div></div>
+        <div class="menu-item"><div class="menu-dot"></div><div class="menu-item-body"><div class="menu-item-name">Crème Brûlée</div></div><div class="menu-item-price">3,50€</div></div>
+      </div>
+    </div>
+
+    <!-- MENU ENFANT -->
+    <div class="tab-panel" id="tab-enfant">
+      <div class="enfant-card">
+        <img src="brand_assets/Photos/burger1.jpg" alt="Menu Enfant" class="enfant-photo" />
+        <div class="enfant-body">
+          <div class="enfant-label">Menu Enfant</div>
+          <div class="enfant-title">PETIT GOURMAND</div>
+          <div class="enfant-items">
+            Tenders ou Nugget<br/>
+            + Frites<br/>
+            + Capri Sun<br/>
+            + Jouet surprise
+          </div>
+        </div>
+        <div class="enfant-price">7,50€<small>Tout inclus</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── ABOUT ────────────────────────────────────────────────────── -->
+  <section id="about">
+    <div class="about-photo-side">
+      <img src="brand_assets/Photos/hotdog1.png" alt="Le Passage ambiance" />
+    </div>
+    <div class="about-text-side">
+      <span class="about-quote-mark">"</span>
+      <h2 class="about-text reveal">
+        Né de la passion pour la<br/>
+        street food <em>authentique.</em>
+      </h2>
+      <div class="about-divider reveal"></div>
+      <p class="about-tagline reveal">
+        Le Passage, c'est l'endroit où chaque bouchée<br/>
+        <strong>raconte une histoire.</strong>
+      </p>
+      <div class="about-pillars">
+        <div class="pillar reveal">
+          <div class="pillar-num">01</div>
+          <div class="pillar-content">
+            <div class="pillar-title">Ingrédients frais</div>
+            <div class="pillar-body">Chaque plat est préparé avec des ingrédients sélectionnés avec soin, chaque jour.</div>
+          </div>
+        </div>
+        <div class="pillar reveal" style="transition-delay:0.1s">
+          <div class="pillar-num">02</div>
+          <div class="pillar-content">
+            <div class="pillar-title">Recettes Maison</div>
+            <div class="pillar-body">Nos sauces, nos marinades, nos desserts — tout est fait ici, avec amour et précision.</div>
+          </div>
+        </div>
+        <div class="pillar reveal" style="transition-delay:0.2s">
+          <div class="pillar-num">03</div>
+          <div class="pillar-content">
+            <div class="pillar-title">L'Ambiance</div>
+            <div class="pillar-body">Plus qu'un restaurant — un lieu de vie où le goût rencontre la convivialité.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── FOOTER ──────────────────────────────────────────────────── -->
+  <footer id="contact">
+    <div class="footer-top">
+      <div>
+        <img src="brand_assets/brand_logo1.jpg" alt="Le Passage" class="footer-logo" />
+        <p class="footer-tagline">Plus qu'un repas. Une expérience.</p>
+        <div class="social-links">
+          <a href="https://www.instagram.com/lepassagerestaurant_bruxelles/" target="_blank" rel="noopener" class="social-link" aria-label="Instagram">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          </a>
+<a href="https://www.tiktok.com/@le.passage.bxl" target="_blank" rel="noopener" class="social-link" aria-label="TikTok">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.77a4.85 4.85 0 0 1-1.01-.08z"/></svg>
+          </a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">Navigation</div>
+        <ul class="footer-links">
+          <li><a href="#featured">Nos Signatures</a></li>
+          <li><a href="#menu">Le Menu Complet</a></li>
+          <li><a href="#about">Notre Histoire</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Nous trouver</div>
+        <div class="footer-address">
+          <strong>Le Passage</strong><br/>
+          Boulevard du Jubilé 103<br/>
+          1080 Bruxelles, Belgique<br/><br/>
+          <strong>Tél :</strong> 0473 43 84 26
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-title">Horaires</div>
+        <ul class="footer-hours">
+          <li><span>Lundi</span><span>12h – 2h</span></li>
+          <li><span>Mardi</span><span>12h – 2h</span></li>
+          <li><span>Mercredi</span><span>12h – 2h</span></li>
+          <li><span>Jeudi</span><span>12h – 2h</span></li>
+          <li><span>Vendredi</span><span>12h – 2h</span></li>
+          <li><span>Samedi</span><span>12h – 2h</span></li>
+          <li><span>Dimanche</span><span>12h – 2h</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="footer-copy">© 2026 <span>Le Passage</span>. Tous droits réservés.</p>
+      <p class="footer-copy">Boulevard du Jubilé 103, 1080 Bruxelles</p>
+    </div>
+  </footer>
+
+  <script>
+    const cursor = document.getElementById('cursor');
+    const ring   = document.getElementById('cursorRing');
+    let mx = 0, my = 0, rx = 0, ry = 0;
+    document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+    function animateCursor() {
+      cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+      rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
+      ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+      requestAnimationFrame(animateCursor);
+    }
+    animateCursor();
+
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 40); });
+
+    function switchTab(id, btn) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + id).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  </script>
+</body>
+</html>
